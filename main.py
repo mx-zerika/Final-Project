@@ -119,3 +119,76 @@ class StudentProtocol(App):
         mission =ProtocolButton(
             text="Begin Academic Assesment",
         )
+         mission.bind(on_press=self.start_mission)
+        root.add_widget(mission)
+
+        root.add_widget(Widget())
+
+        self.status_label = Label(
+            text="STATUS: PENDING",
+            color=MUTED,
+            font_size="12sp",
+            size_hint_y=None,
+            height=dp(30),
+        )
+        root.add_widget(self.status_label)
+
+        return root
+
+
+    def start_mission(self, instance):
+        from kivy.uix.popup import Popup
+
+        content  = BoxLayout(
+        orientation="vertical",
+        padding=dp(16),
+        spacing=dp(12),
+    )
+
+        content.add_widget(Label(
+        text="Which language is used  to build this prototype?",
+        color=PARCHMENT,
+        font_size="16sp",
+    ))
+
+        popup = Popup(
+        text="ACADEMIC ASSESMENT",
+        content=content,
+        size_hint=(0.88,  0.60),
+        separator_color=GOLD,
+        background_color=PANEL,
+    )
+
+        for answer in ["Python",  "HTML", "SQL",]:
+            button =  ProtocolButton(text=answer)
+            button.bind(
+                on_press=lambda btn, a=answer:
+                self.check_answer(a, popup)
+        )
+        content.add_widget(button)
+
+        popup.open()
+
+    def check_answer(self, answer, popup):
+        popup.dismiss()
+
+        if answer == "Python":
+         self.exp += 50
+         self.status_label.text = "CORRECT! +25 EXP"
+
+        if self.exp >= 100:
+            self.exp -=100
+            self.level +=  1
+
+        self.level_label.text = (
+            f"ACADEMIC LEVEL {self.level:02d}"
+        )
+        self.exp_label.text = (
+            f"EXPERIENCE {self.exp} / 100"
+        )
+        self.exp_bar.value = self.exp
+        
+        
+
+if __name__ == "__main__":
+    StudentProtocol().run()
