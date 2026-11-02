@@ -6,6 +6,7 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.widget import Widget
+from kivy.uix.popup import Popup
 
 # Dark Academia Palette
 
@@ -35,7 +36,34 @@ class StudentProtocol(App):
 
         self.exp = 0
         self.level  = 1
+        self.mission_index = 0
 
+         #MISSION DATABASE
+
+        self.mission = [
+            {
+                "title": "PROGRAMMING FUNDAMENTALS",
+                "question": "Which language is used to build this prototype?",
+                "answers": ["Python", "HTML", "SQL"],
+                "correct": "Python"
+            },
+
+            {
+                "title": "WEB DEVELOPMENT",
+                "question": "Which language is used to style web pages?",
+                "answers": ["CSS", "HTML", "SQL"],
+                "correct": "HTML"
+            },
+
+            {
+                "title": "DATABASE FUNDAMENTALS",
+                "question": "Which language is commonly used to query databases?",
+                "answers": ["CSS", "Kotlin", "SQL"],
+                "correct": "SQL"
+            }
+        ]
+
+        
         root = BoxLayout(
             orientation="vertical",
             padding=dp(22),
@@ -47,7 +75,6 @@ class StudentProtocol(App):
             color=GOLD,
             font_size="22sp",
             bold=True,
-
             size_hint_y=None,
             height=dp(52),
         ))
@@ -60,7 +87,10 @@ class StudentProtocol(App):
             height=dp(25),
         ))
 
-        root.add_widget(Widget(size_hint_y=None, height=dp(5)))
+        root.add_widget(Widget(
+            size_hint_y=None, 
+            height=dp(5)
+        ))
 
         root.add_widget(Label(
             text="STUDENT PROFILE",
@@ -69,7 +99,6 @@ class StudentProtocol(App):
             bold=True,
             size_hint_y=None,
             height=dp(32),
-            halign="left",
         ))
 
         self.level_label  =  Label(
@@ -97,7 +126,10 @@ class StudentProtocol(App):
         )
         root.add_widget(self.exp_bar)
 
-        root.add_widget(Widget(size_hint_y=None, height=dp(8)))
+        root.add_widget(Widget(
+            size_hint_y=None, 
+            height=dp(8)
+        ))
 
         root.add_widget(Label(
             text="AVAIBLE MISSIONS",
