@@ -52,7 +52,7 @@ class StudentProtocol(App):
                 "title": "WEB DEVELOPMENT",
                 "question": "Which language is used to style web pages?",
                 "answers": ["CSS", "HTML", "SQL"],
-                "correct": "HTML"
+                "correct": "CSS"
             },
 
             {
@@ -147,12 +147,14 @@ class StudentProtocol(App):
             size_hint_y=None,
             height=dp(30)
         ))
-
-        mission =ProtocolButton(
+        root.add_widget(self.mission_label)
+        
+        self.mission_button =ProtocolButton(
             text="Begin Academic Assesment",
         )
-         mission.bind(on_press=self.start_mission)
-        root.add_widget(mission)
+        
+        self.mission_button.bind(on_press=self.start_mission)
+        root.add_widget(self.mission_button)
 
         root.add_widget(Widget())
 
@@ -169,7 +171,12 @@ class StudentProtocol(App):
 
 
     def start_mission(self, instance):
-        from kivy.uix.popup import Popup
+       
+        if self.mission_index >= len(self.mission):
+            return
+
+        
+        mission = self.mission[self.mission_index]
 
         content  = BoxLayout(
         orientation="vertical",
@@ -178,49 +185,93 @@ class StudentProtocol(App):
     )
 
         content.add_widget(Label(
-        text="Which language is used  to build this prototype?",
+        text=mission["question"],
         color=PARCHMENT,
         font_size="16sp",
+        size_hint_y=None,
+        height=dp(85),
+        halign="center",
+        valign="middle",
     ))
 
         popup = Popup(
-        text="ACADEMIC ASSESMENT",
+        title=mission["title"],
         content=content,
         size_hint=(0.88,  0.60),
         separator_color=GOLD,
         background_color=PANEL,
     )
 
-        for answer in ["Python",  "HTML", "SQL",]:
+       for answer in mission["answers"]:
+
             button =  ProtocolButton(text=answer)
+            
             button.bind(
-                on_press=lambda btn, a=answer:
-                self.check_answer(a, popup)
+                on_press=lambda btn, a=answer, m=mission, p=popup:
+                self.check_answer(
+                    a,
+                    m["correct"],
+                    p 
+                    )
         )
-        content.add_widget(button)
+            # IMPORTANT: KEEP THIS INSIDE THE FOR LOOP!
+            content.add_widget(button)
 
         popup.open()
 
-    def check_answer(self, answer, popup):
+
+    def check_answer(self, answer, correct_answer, popup):
         popup.dismiss()
 
-        if answer == "Python":
-         self.exp += 50
-         self.status_label.text = "CORRECT! +25 EXP"
+        if answer == correct_answer:
 
-        if self.exp >= 100:
-            self.exp -=100
-            self.level +=  1
+            # REWARD  
+            self.exp += 20
+            self.status_label.text = "CORRECT! +20 EXP"
+
+            # LEVEL SYSTEM
+
+            while self.exp >= 100:
+                self.exp -=100
+                self.level += 1
+
+            self.level_label.text = (
+                f"ACADEMIC LEVEL {self.level:02d}"
+            )
+            self.exp_label.text = (
+                f"EXPERIENCE {self.exp} / 100"
+            )
+            self.exp_bar.value = self.exp
+
+            self.mission_index += 1
+            print("MISSION INDEX:", self.mission_index)
+            print("TOTAL MISSIONS:", len(self.mission))
+
+            if self.mission_index < len(self.mission):
+                next_number = self.mission_index + 1
+
+                self.mission_label.text = (
+                    f"MISSION {next_number:02d} | KNOWLEDGE CHECK"
+                )
+
+            else:
+                self.mission_label.text = "ALL MISSIONS COMPLETED" 
+                self.mission_button.text = "MISSION COMPLETED"
+                self.mission_button.disabled = True
+                self.status_label.text = "ACADEMIC STATUS: COMPLETED!"
+
+        else:
+     
+            self.status_label.text = "INCORRECT! NO EXP"
 
         self.level_label.text = (
             f"ACADEMIC LEVEL {self.level:02d}"
         )
+
         self.exp_label.text = (
             f"EXPERIENCE {self.exp} / 100"
         )
-        self.exp_bar.value = self.exp
-        
-        
+        self.exp_bar.value = self.exp     
 
 if __name__ == "__main__":
     StudentProtocol().run()
