@@ -1,3 +1,5 @@
+import json
+import os
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.metrics import dp
@@ -30,6 +32,30 @@ class ProtocolButton(Button):
 
 
 class StudentProtocol(App):
+     def load_progress(self):
+        if os.path.exists("progress.json"):
+            try:
+                with open("progress.json", "r") as file:
+                    data = json.load(file)
+
+                self.exp = data.get("exp", 0)
+                self.level = data.get("level", 1)
+                self.mission_index = data.get("mission_index", 0)
+
+            except (json.JSONDecodeError, TypeError, ValueError):
+                print("Save file is invalid. Starting fresh.")
+    def save_progress(self):
+        data = {
+            "exp": self.exp,
+            "level": self.level,
+            "mission_index": self.mission_index 
+        }
+
+        with open("progress.json", "w") as file:
+            json.dump(data, file, indent=4)
+
+        print("PROGRESS SAVED!")
+
     def build(self):
         Window.clearcolor = BG
         Window.size = (430, 760)
@@ -166,6 +192,24 @@ class StudentProtocol(App):
             height=dp(30),
         )
         root.add_widget(self.status_label)
+
+        # Restore Dashboard
+
+        self.level_label.text = f"ACADEMIC LEVEL {self.level:02d}"
+        self.exp_label.text = f"EXPERIENCE {self.exp} / 100"
+        self.exp_bar.value = self.exp
+
+        if self.mission_index < len(self.mission):
+            next_number = self.mission_index + 1
+            self.mission_label.text = (
+                f"MISSION {next_number:02d} | KNOWLEDGE CHECK"
+            )
+        else:
+            self.mission_label.text = "ALL MISSION COMPLETED!"
+            self.mission_button.text = "MISSION COMPLETED!"
+            self.mission_button.disabled = True
+            self.status_label.text = "ACADEMIC STATUS: COMPLETED!"
+
 
         return root
 
