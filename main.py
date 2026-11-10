@@ -1,3 +1,4 @@
+from kivy.uix.scrollview import ScrollView
 import json
 import os
 from kivy.app import App
@@ -9,6 +10,7 @@ from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.widget import Widget
 from kivy.uix.popup import Popup
+from kivy.uix.screenmanager import ScreenManager, Screen
 
 # Dark Academia Palette
 
@@ -30,6 +32,184 @@ class ProtocolButton(Button):
         self.size_hint_y  = None
         self.height = dp(48)
 
+class ProfileScreen(Screen):
+    def __init__(self, app, **kwargs):
+        super().__init__(**kwargs)
+        self.app = app
+
+        # MAIN PROFILE LAYOUT
+        main_layout = BoxLayout(
+            orientation="vertical",
+            padding=dp(18),
+            spacing=dp(10)
+        )
+
+        # PROFILE HEADER
+        main_layout.add_widget(Label(
+            text="[ STUDENT PROFILE ]",
+            color=GOLD,
+            font_size="22sp",
+            bold=True,
+            size_hint_y=None,
+            height=dp(50)
+        ))
+
+        main_layout.add_widget(Label(
+            text="ACADEMIC CENTER",
+            color=MUTED,
+            font_size="12sp",
+            size_hint_y=None,
+            height=dp(25)
+        ))
+
+        #Scrollable Content 
+
+        scroll = ScrollView(
+        do_scroll_x=False,
+        bar_width=dp(4)
+        )
+
+        content = BoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            padding=dp(12),
+            spacing=dp(18)
+        )
+
+        content.bind(
+            minimum_height=content.setter("height")
+        )
+
+        # Student Emblem
+
+        content.add_widget(Label(
+            text= " THE NEW SCHOLAR",
+            color=GOLD,
+            font_size="20sp",
+            bold=True,
+            size_hint_y=None,
+            height=dp(100)
+        ))
+
+        # Level
+        self.profile_level = Label(
+            text="ACADEMIC LEVEL 01",
+            color=GOLD,
+            font_size="20sp",
+            size_hint_y=None,
+            height=dp(45)
+        )
+        content.add_widget(self.profile_level)
+
+        # EXPERIENCE
+        self.profile_exp = Label(
+            text="EXPERIENCE 0 / 100",
+            color=PARCHMENT,
+            font_size="15sp",
+            size_hint_y=None,
+            height=dp(35)
+        )
+        content.add_widget(self.profile_exp)
+
+        self.profile_exp_bar = ProgressBar(
+            max=100,
+            value=0,
+            size_hint_y=None,
+            height=dp(12)
+        )
+        content.add_widget(self.profile_exp_bar)
+
+        # MISSION STATISTICS
+
+        self.profile_mission = Label(
+            text="MISSION COMPLETED: 0 / 3",
+            color=PARCHMENT,
+            font_size="15sp",
+            size_hint_y=None,
+            height=dp(45)
+        )
+        content.add_widget(self.profile_mission)
+        
+        content.add_widget(Label(
+            text="-- ACHIEVEMENT ARCHIVE --",
+            color=GOLD,
+            font_size="17sp",
+            bold=True,
+            size_hint_y=None,
+            height=dp(50)
+        ))
+
+        self.achivement_list = BoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            spacing=dp(10)
+        )
+
+        self.achivement_list.bind(
+            minimum_height=self.achivement_list.setter("height")
+        )
+
+        content.add_widget(self.achivement_list)
+
+        achivements = [
+            ( self.app.mission_index >= 1,
+            "First Steps",
+            "COMMON!)"),
+
+            ( self.app.mission_index >= len(self.app.mission),
+             "Knowledge Seeker",
+                "RARE!"),
+
+            ( self.app.level >= 2,
+             "The Scholar",
+                "EPIC!"),
+
+        ]
+
+        for unlocked, achivement, rarity in achivements:
+
+             if unlocked:
+                 status = "[UNLOCKED]"
+                 color = GOLD
+
+             else:
+                status = "[LOCKED]"
+                color = MUTED
+
+             self.achivement_list.add_widget(Label(
+                text=f"{status} {achivement} - {rarity}",
+                color=color,
+                font_size="13sp",
+                size_hint_y=None,
+                height=dp(45),
+                halign="left",
+                valign="middle"
+            ))
+
+        content.add_widget(Widget(
+            size_hint_y=None,
+            height=dp(30)
+        ))
+
+        scroll.add_widget(content)
+        main_layout.add_widget(scroll)
+
+        #Fixed Navigation Button
+
+        back_button = ProtocolButton(
+            text="BACK TO CENTER"
+        )
+
+        back_button.bind(
+            on_press=self.go_to_dashboard
+        )
+
+        main_layout.add_widget(back_button)
+
+        self.add_widget(main_layout)
+
+ def go_to_dashboard(self, instance):
+        self.manager.current = "dashboard"
 
 class StudentProtocol(App):
      def load_progress(self):
@@ -59,10 +239,13 @@ class StudentProtocol(App):
     def build(self):
         Window.clearcolor = BG
         Window.size = (430, 760)
+        self.screen_manager = ScreenManager ()
 
         self.exp = 0
         self.level  = 1
         self.mission_index = 0
+        self.load_progress()
+
 
          #MISSION DATABASE
 
@@ -210,8 +393,37 @@ class StudentProtocol(App):
             self.mission_button.disabled = True
             self.status_label.text = "ACADEMIC STATUS: COMPLETED!"
 
+ # Dashboard Screen
 
-        return root
+        dashboard_screen = Screen(name="dashboard")
+        dashboard_screen.add_widget(root)
+
+        self.screen_manager.add_widget(dashboard_screen)
+
+        #Profile Screen
+        self.profile_screen = ProfileScreen(
+            self, name="profile"
+        )
+
+        self.screen_manager.add_widget(self.profile_screen)
+
+        return self.screen_manager
+
+ def open_profile(self, instance):
+        self.profile_screen.profile_level.text = (
+            f"ACADEMIC LEVEL {self.level:02d}"
+        )
+        self.profile_screen.profile_exp.text = (
+            f"EXPERIENCE {self.exp} / 100"
+        )
+
+        self.profile_screen.profile_exp_bar.value = self.exp
+
+        self.profile_screen.profile_mission.text = (
+            f"MISSION COMPLETED: {self.mission_index} / {len(self.mission)}"
+        )
+
+        self.screen_manager.current = "profile"
 
 
     def start_mission(self, instance):
