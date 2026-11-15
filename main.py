@@ -11,6 +11,7 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.widget import Widget
 from kivy.uix.popup import Popup
 from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.graphics import Color, RoundedRectangle
 
 # Dark Academia Palette
 
@@ -31,6 +32,24 @@ class ProtocolButton(Button):
         self.font_size = "15sp"
         self.size_hint_y  = None
         self.height = dp(48)
+
+class AchievementCard(BoxLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        with self.canvas.before:
+            Color(*PANEL)
+            self.bg_rect = RoundedRectangle(
+                radius=[dp(8)]
+            )
+
+            self.bind(
+                pos=self.update_bg,
+                size=self.update_bg
+            )
+    def update_bg(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
 
 class ProfileScreen(Screen):
     def __init__(self, app, **kwargs):
@@ -151,22 +170,70 @@ class ProfileScreen(Screen):
 
         content.add_widget(self.achivement_list)
 
-        achivements = [
+         # MIssion archive place
+
+        self.mission_archive = BoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            spacing=dp(10)
+        )
+
+        self.mission_archive.bind(
+            minimum_height=self.mission_archive.setter("height")
+        )
+
+        content.add_widget(Label(
+            text="MISSION ARCHIVE",
+            color=GOLD,
+            font_size="18sp",
+            size_hint_y=None,
+            height=dp(35)
+        ))
+
+        content.add_widget(self.mission_archive)
+
+        content.add_widget(Widget(
+                size_hint_y=None,
+                height=dp(30)
+                ))
+        
+        scroll.add_widget(content)
+        main_layout.add_widget(scroll)
+        
+        #Fixed Navigation Button
+        
+        back_button = ProtocolButton(
+            text="BACK TO CENTER"
+        )
+        
+        back_button.bind(
+            on_press=self.go_to_dashboard
+        )
+        
+        main_layout.add_widget(back_button)
+        
+        self.add_widget(main_layout)
+
+      def update_achievements(self):
+
+        self.achievement_list.clear_widgets()
+
+        achievements = [
             ( self.app.mission_index >= 1,
             "First Steps",
-            "COMMON!)"),
+            "COMMON"),
 
             ( self.app.mission_index >= len(self.app.mission),
              "Knowledge Seeker",
-                "RARE!"),
+                "RARE"),
 
             ( self.app.level >= 2,
              "The Scholar",
-                "EPIC!"),
+                "EPIC"),
 
         ]
 
-        for unlocked, achivement, rarity in achivements:
+        for unlocked, achievement, rarity in achievements:
 
              if unlocked:
                  status = "[UNLOCKED]"
@@ -176,40 +243,93 @@ class ProfileScreen(Screen):
                 status = "[LOCKED]"
                 color = MUTED
 
-             self.achivement_list.add_widget(Label(
-                text=f"{status} {achivement} - {rarity}",
-                color=color,
-                font_size="13sp",
+             achievement_card = AchievementCard(
+                orientation="vertical",
+                padding=dp(12),
+                spacing=dp(5),
                 size_hint_y=None,
-                height=dp(45),
+                height=dp(85)
+             )
+
+             achievement_card.add_widget(Label(
+                 text=f"{status} {achievement}",
+                 color=color,
+                 font_size="14sp",
+                 bold=True,
+                 halign="left"
+             ))
+
+             achievement_card.add_widget(Label(
+                 text=f" {rarity}",
+                 color=MUTED,
+                 font_size="11sp",
+                 halign="left"
+             ))
+
+             self.achievement_list.add_widget(achievement_card)
+
+ def update_mission_archive(self):
+        self.mission_archive.clear_widgets()
+
+        for index in range(self.app.mission_index):
+
+            mission = self.app.mission[index]
+
+            mission_box = BoxLayout(
+                orientation="horizontal",
+                size_hint_y=None,
+                height=dp(55),
+                spacing=dp(10)
+            )
+
+            with mission_box.canvas.before:
+                Color(*PANEL)
+                mission_bg = RoundedRectangle(
+                    pos=mission_box.pos,
+                    size=mission_box.size,
+                    radius=[dp(8)]
+                )
+            def update_mission_bg(instance, *args, bg=mission_bg):
+                bg.pos = instance.pos
+                bg.size = instance.size
+
+            mission_box.bind(
+                pos=update_mission_bg,
+                size=update_mission_bg
+            )
+
+            mission_label = Label(
+                text=mission["title"],
+                color=PARCHMENT,
+                font_size="13sp",
                 halign="left",
-                valign="middle"
-            ))
+                valign="middle",
+                size_hint_x=0.65
+            )
 
-        content.add_widget(Widget(
-            size_hint_y=None,
-            height=dp(30)
-        ))
+            mission_label.bind(
+                size=lambda instance, value:
+                setattr(instance, "text_size", (value[0], None))
+            )
 
-        scroll.add_widget(content)
-        main_layout.add_widget(scroll)
+            retry_button = ProtocolButton(
+                text="RETRY",
+                size_hint_x=0.35
+            )
 
-        #Fixed Navigation Button
+            retry_button.bind(
+                on_press=lambda btn, i=index:
+                self.app.start_mission(btn, replay_index=i)
+            )
 
-        back_button = ProtocolButton(
-            text="BACK TO CENTER"
-        )
+            mission_box.add_widget(mission_label)
+            mission_box.add_widget(retry_button)
 
-        back_button.bind(
-            on_press=self.go_to_dashboard
-        )
+            self.mission_archive.add_widget(mission_box)
+                
 
-        main_layout.add_widget(back_button)
-
-        self.add_widget(main_layout)
-
- def go_to_dashboard(self, instance):
-        self.manager.current = "dashboard"
+     def go_to_dashboard(self, instance):
+            self.manager.current = "dashboard"
 
 class StudentProtocol(App):
      def load_progress(self):
@@ -245,6 +365,7 @@ class StudentProtocol(App):
         self.level  = 1
         self.mission_index = 0
         self.load_progress()
+        self.is_replay = False
 
 
          #MISSION DATABASE
@@ -269,9 +390,31 @@ class StudentProtocol(App):
                 "question": "Which language is commonly used to query databases?",
                 "answers": ["CSS", "Kotlin", "SQL"],
                 "correct": "SQL"
+            },
+
+             {
+                "title": "PYTHON FUNDAMENTALS II",
+                "question": "Which keyword is used to define a function in Python?",
+                "answers": [
+                    "def",
+                    "class",
+                    "import"
+                ],
+                "correct": "def"
+            },
+
+
+            {
+                "title": "PYTHON DATA TYPES",
+                "question": "Which data type is used to store True or False values in Python?",
+                "answers": [
+                    "String",
+                    "Boolean",
+                    "Integer"
+                ],
+                "correct": "Boolean"
             }
         ]
-
         
         root = BoxLayout(
             orientation="vertical",
@@ -365,6 +508,16 @@ class StudentProtocol(App):
         self.mission_button.bind(on_press=self.start_mission)
         root.add_widget(self.mission_button)
 
+         profile_button = ProtocolButton(
+            text="STUDENT PROFILE"
+        )
+
+        profile_button.bind(
+            on_press=self.open_profile
+        )
+
+        root.add_widget(profile_button)
+
         root.add_widget(Widget())
 
         self.status_label = Label(
@@ -422,17 +575,25 @@ class StudentProtocol(App):
         self.profile_screen.profile_mission.text = (
             f"MISSION COMPLETED: {self.mission_index} / {len(self.mission)}"
         )
-
+        
+        self.profile_screen.update_achievements()
+        self.profile_screen.update_mission_archive()
         self.screen_manager.current = "profile"
 
 
-    def start_mission(self, instance):
-       
-        if self.mission_index >= len(self.mission):
-            return
+    def start_mission(self, instance, replay_index=None):
+       # Determine if this is a replay
+        is_replay = replay_index is not None
+
+        if is_replay:
+            mission = self.mission[replay_index]
+
+        else:
+            if self.mission_index >= len(self.mission):
+             return
 
         
-        mission = self.mission[self.mission_index]
+            mission = self.mission[self.mission_index]
 
         content  = BoxLayout(
         orientation="vertical",
@@ -451,7 +612,7 @@ class StudentProtocol(App):
     ))
 
         popup = Popup(
-        title=mission["title"],
+        title=mission["title"+ (" | REPLAY" if is_replay else ""),
         content=content,
         size_hint=(0.88,  0.60),
         separator_color=GOLD,
@@ -463,11 +624,12 @@ class StudentProtocol(App):
             button =  ProtocolButton(text=answer)
             
             button.bind(
-                on_press=lambda btn, a=answer, m=mission, p=popup:
+                on_press=lambda btn, a=answer, m=mission, p=popup, r=is_replay:
                 self.check_answer(
                     a,
                     m["correct"],
                     p 
+                    r
                     )
         )
             # IMPORTANT: KEEP THIS INSIDE THE FOR LOOP!
@@ -476,58 +638,116 @@ class StudentProtocol(App):
         popup.open()
 
 
-    def check_answer(self, answer, correct_answer, popup):
+    def check_answer(self, answer, correct_answer, popup, is_replay=False):
         popup.dismiss()
-
-        if answer == correct_answer:
-
-            # REWARD  
-            self.exp += 20
-            self.status_label.text = "CORRECT! +20 EXP"
-
-            # LEVEL SYSTEM
-
-            while self.exp >= 100:
-                self.exp -=100
-                self.level += 1
-
-            self.level_label.text = (
-                f"ACADEMIC LEVEL {self.level:02d}"
-            )
-            self.exp_label.text = (
-                f"EXPERIENCE {self.exp} / 100"
-            )
-            self.exp_bar.value = self.exp
-
-            self.mission_index += 1
-            print("MISSION INDEX:", self.mission_index)
-            print("TOTAL MISSIONS:", len(self.mission))
-
-            if self.mission_index < len(self.mission):
-                next_number = self.mission_index + 1
-
-                self.mission_label.text = (
-                    f"MISSION {next_number:02d} | KNOWLEDGE CHECK"
-                )
-
+           previously_unlocked = self.get_unlocked_achivements()
+ if is_replay:
+                self.status_label.text = "REPLAY COMPLETED. NO EXP GAINED"
             else:
-                self.mission_label.text = "ALL MISSIONS COMPLETED" 
-                self.mission_button.text = "MISSION COMPLETED"
-                self.mission_button.disabled = True
-                self.status_label.text = "ACADEMIC STATUS: COMPLETED!"
+                # REWARD  
+                self.exp += 20
+                self.status_label.text = "CORRECT! +20 EXP"
+
+                # LEVEL SYSTEM
+
+                while self.exp >= 100:
+                        self.exp -=100
+                        self.level += 1
+
+                self.level_label.text = (
+                        f"ACADEMIC LEVEL {self.level:02d}"
+                    )
+                self.exp_label.text = (
+                    f"EXPERIENCE {self.exp} / 100"
+                )
+                self.exp_bar.value = self.exp
+
+                self.mission_index += 1
+                self.save_progress()
+                print("MISSION INDEX:", self.mission_index)
+                print("TOTAL MISSIONS:", len(self.mission))
+
+                if self.mission_index < len(self.mission):
+                    next_number = self.mission_index + 1
+
+                    self.mission_label.text = (
+                        f"MISSION {next_number:02d} | KNOWLEDGE CHECK"
+                    )
+
+                    self.mission_button.text = "START MISSION"
+                    self.mission_button.disabled = False
+
+                else:
+                    self.mission_label.text = "ALL MISSIONS COMPLETED" 
+                    self.mission_button.text = "MISSION COMPLETED"
+                    self.mission_button.disabled = True
+                    self.status_label.text = "ACADEMIC STATUS: COMPLETED!"
 
         else:
-     
             self.status_label.text = "INCORRECT! NO EXP"
 
+        #Update Dashboard 
         self.level_label.text = (
             f"ACADEMIC LEVEL {self.level:02d}"
         )
-
         self.exp_label.text = (
             f"EXPERIENCE {self.exp} / 100"
         )
-        self.exp_bar.value = self.exp     
+        self.exp_bar.value = self.exp
 
+        self.profile_screen.update_achievements()
+
+        newly_unlocked = (
+            self.get_unlocked_achivements()
+            - previously_unlocked
+        )
+
+        if newly_unlocked:
+            self.show_achivements_popup(
+                sorted(newly_unlocked)
+            )
+
+ def get_unlocked_achivements(self):
+        unlocked = set()
+
+        if self.mission_index >= 1:
+            unlocked.add("FIRST STEPS")
+
+        if self.mission_index >= len(self.mission):
+            unlocked.add("KNOWLEDGE SEEKER")
+
+        if self.mission_index >= 2:
+            unlocked.add("The Scholar")
+
+        return unlocked
+ def show_achivements_popup(self, new_achivements):
+
+        description = {
+            "FIRST STEPS": "Complete your first learning mission.",
+            "KNOWLEDGE SEEKER": "Complete every avaible mission.",
+            "THE SCHOLAR": "Reach Level 2."
+        }
+
+        message = "\n\n". join(
+            f"{name}\n{description[name]}"
+            for name in new_achivements
+        )
+
+        popup = Popup(
+            title="ACHIVEMENT UNLOCKED!",
+            content=Label(
+                text=message,
+                color=PARCHMENT,
+                halign="center",
+                valign="middle"
+            ),
+            size_hint=(None, None),
+            size=(dp(340), dp(250)),
+            background_color=PANEL,
+            separator_color=GOLD
+        )
+
+        popup.open()
+              
 if __name__ == "__main__":
     StudentProtocol().run()
