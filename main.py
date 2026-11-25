@@ -1,6 +1,4 @@
 from kivy.uix.scrollview import ScrollView
-import json
-import os
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.metrics import dp
@@ -65,7 +63,7 @@ class ProfileScreen(Screen):
 
         # PROFILE HEADER
         main_layout.add_widget(Label(
-            text="[ STUDENT PROFILE ]",
+            text="[ STUDENT RECORD ]",
             color=GOLD,
             font_size="22sp",
             bold=True,
@@ -87,6 +85,8 @@ class ProfileScreen(Screen):
         do_scroll_x=False,
         bar_width=dp(4)
         )
+
+        self.profile_scroll = scroll
 
         content = BoxLayout(
             orientation="vertical",
@@ -161,7 +161,7 @@ class ProfileScreen(Screen):
         content.add_widget(self.profile_mission)
         
         content.add_widget(Label(
-            text="-- ACHIEVEMENT ARCHIVE --",
+            text="-- ACADEMIC ACHIEVEMENT --",
             color=GOLD,
             font_size="17sp",
             bold=True,
@@ -194,7 +194,7 @@ class ProfileScreen(Screen):
         )
 
         content.add_widget(Label(
-            text="LESSON ARCHIVE",
+            text="-- LESSON RECORD --",
             color=GOLD,
             font_size="18sp",
             size_hint_y=None,
@@ -241,7 +241,7 @@ class ProfileScreen(Screen):
                 "Complete every available lesson."),
 
             ( self.app.level >= 2,
-             "The New Student of The Year",
+             "The New Student",
                 "EPIC",
                 "Reach Academic Level 2"),
 
@@ -293,15 +293,19 @@ class ProfileScreen(Screen):
     def update_mission_archive(self):
         self.mission_archive.clear_widgets()
 
-        for index in range(self.app.mission_index):
+        total_lessons = len(self.app.mission)
+        completed_count = min(
+            max(self.app.mission_index, 0),
+            total_lessons
+        )
 
-            mission = self.app.mission[index]
+        for index, mission in enumerate(self.app.mission):
 
             mission_box = BoxLayout(
                 orientation="horizontal",
                 size_hint_y=None,
                 height=dp(65),
-                spacing=dp(10),
+                spacing=dp(8),
                 padding=[dp(8), dp(5)]
             )
 
@@ -312,22 +316,21 @@ class ProfileScreen(Screen):
                     size=mission_box.size,
                     radius=[dp(8)]
                 )
-            def update_mission_bg(instance, *args, bg=mission_bg):
-                bg.pos = instance.pos
-                bg.size = instance.size
-
             mission_box.bind(
-                pos=update_mission_bg,
-                size=update_mission_bg
-            )
+               pos=lambda instance, value, bg=mission_bg:
+               setattr(bg, "pos", value),
 
+               size=lambda instance, value, bg=mission_bg:
+               setattr(bg, "size", value)
+           )
+        
             mission_label = Label(
                 text=f"LESSON {index + 1:02d}\n{mission['title']}",
                 color=PARCHMENT,
-                font_size="11sp",
+                font_size="10sp",
                 halign="left",
                 valign="middle",
-                size_hint_x=0.52
+                size_hint_x=0.48
             )
 
             mission_label.bind(
@@ -335,32 +338,58 @@ class ProfileScreen(Screen):
                 setattr(instance, "text_size", value)
             )
 
+            if index < completed_count:
+                status = "COMPLETED!"
+                status_color = GOLD
+                button_text = "REVIEW"
+                button_disabled = False
+
+            elif index == completed_count:
+                status = "CURRENT LESSON"
+                status_color = GOLD
+                button_text = "START"
+                button_disabled = False 
+
+            else:
+                status = "LOCKED"
+                status_color = MUTED
+                button_text = "LOCKED"
+                button_disabled = True
+
             status_label = Label(
-                text="COMPLETED",
-                color=GOLD,
-                font_size="10sp",
+                text=status,
+                color=status_color,
+                font_size="9sp",
                 bold=True,
-                size_hint_x=0.23,
-                halign="center",
-                valign="middle",
+                size_hint_x=0.24,
+                halign="center"
             )
 
-            retry_button = ProtocolButton(
-                text="REVIEW",
-                size_hint_x=0.25
+            action_button = ProtocolButton(
+                text=button_text,
+                size_hint_x=0.28,
+                disabled=button_disabled
             )
 
-            retry_button.bind(
-                on_press=lambda btn, i=index:
-                self.app.start_mission(btn, replay_index=i)
-            )
+            if index < completed_count:
+                action_button.bind(
+                    on_press=lambda btn, i=index:
+                    self.app.start_mission(
+                        btn,
+                        replay_index=i
+                    )
+                )
+
+            elif index == completed_count:
+                action_button.bind(
+                    on_press=self.app.start_mission
+                )
 
             mission_box.add_widget(mission_label)
             mission_box.add_widget(status_label)
-            mission_box.add_widget(retry_button)
+            mission_box.add_widget(action_button)
 
-            self.mission_archive.add_widget(mission_box)
-                
+            self.mission_archive.add_widget(mission_box)      
 
     def go_to_dashboard(self, instance):
      self.manager.current = "dashboard"
@@ -413,6 +442,8 @@ class RankArchiveScreen(Screen):
             do_scroll_x=False,
             bar_width=dp(4)
         )
+
+        self.rank_scroll = scroll
 
         self.rank_list = BoxLayout(
             orientation="vertical",
@@ -573,8 +604,8 @@ class StudentProtocol(App):
 
         root = BoxLayout(
             orientation="vertical",
-            padding=dp(16),
-            spacing=dp(8)
+            padding=dp(12),
+            spacing=dp(6)
         )
 
         root.add_widget(Label(
@@ -612,11 +643,23 @@ class StudentProtocol(App):
             text="ACADEMIC LEVEL 01",
             color=GOLD,
             font_size="19sp",
+            bold=True,
             size_hint_y=None,
             height=dp(35),
         )
 
         root.add_widget(self.level_label)
+
+        self.rank_label = Label(
+            text="RANK: FRESHMAN",
+            color=PARCHMENT,
+            font_size="14sp",
+            bold=True,
+            size_hint_y=None,
+            height=dp(26)
+        )
+
+        root.add_widget(self.rank_label)
 
         self.exp_label  = Label(
             text="EXPERIENCE 0 / 100",
@@ -640,7 +683,7 @@ class StudentProtocol(App):
             ))
 
         root.add_widget(Label(
-            text="AVAILABLE LESSONS",
+            text="ACADEMIC CURRICULUM",
             color=PARCHMENT,
             font_size="18sp",
             bold=True,
@@ -649,7 +692,7 @@ class StudentProtocol(App):
         ))
 
         self.mission_label = Label(
-            text="LESSON 1 | KNOWLEDGE CHECK",
+            text="LESSON 01 | KNOWLEDGE CHECK",
             color=GOLD,
             font_size="14sp",
             size_hint_y=None,
@@ -677,14 +720,14 @@ class StudentProtocol(App):
         root.add_widget(self.mission_progress_bar)
 
         self.mission_button =ProtocolButton(
-            text="Begin Academic Assesment",
+            text="Start Lesson",
         )
 
         self.mission_button.bind(on_press=self.start_mission)
         root.add_widget(self.mission_button)
 
         profile_button = ProtocolButton(
-            text="STUDENT PROFILE"
+            text="Student Profile"
         )
 
         profile_button.bind(
@@ -694,7 +737,7 @@ class StudentProtocol(App):
         root.add_widget(profile_button)
 
         rank_button = ProtocolButton(
-            text="ACADEMIC RANKS"
+            text="Academic Ranks"
         )
 
         rank_button.bind(
@@ -706,30 +749,23 @@ class StudentProtocol(App):
         root.add_widget(Widget())
 
         self.status_label = Label(
-            text="STATUS: PENDING",
+            text="System Ready. Awaiting Student Input..",
             color=MUTED,
             font_size="12sp",
             size_hint_y=None,
-            height=dp(30),
+            height=dp(36),
+            halign="center",
+            valign="middle",
         )
         root.add_widget(self.status_label)
 
         # Restore Dashboard
-
-        self.level_label.text = f"ACADEMIC LEVEL {self.level:02d}"
-        self.exp_label.text = f"EXPERIENCE {self.exp} / 100"
-        self.exp_bar.value = self.exp
-
-        self.mission_progress_label.text = (
-            f"LESSONS COMPLETED: {self.mission_index} / {len(self.mission)}"
-        )
-
-        self.mission_progress_bar.value = self.mission_index
+        self.refresh_dashboard_display()
 
         if self.mission_index < len(self.mission):
             next_number = self.mission_index + 1
             self.mission_label.text = (
-                f"LESSONS {next_number:02d} | KNOWLEDGE CHECK"
+                f"LESSON {next_number:02d} | KNOWLEDGE CHECK"
             )
         else:
             self.mission_label.text = "ALL LESSONS COMPLETED!"
@@ -760,26 +796,61 @@ class StudentProtocol(App):
 
         return self.screen_manager
 
-    def open_profile(self, instance):
-        self.profile_screen.profile_level.text = (
+    def refresh_dashboard_display(self):
+        total_lessons = len(self.mission)
+        completed_lessons = min(self.mission_index, total_lessons)
+
+        #Academic infor
+        self.level_label.text = (
             f"ACADEMIC LEVEL {self.level:02d}"
         )
-        self.profile_screen.profile_exp.text = (
+
+        self.rank_label.text = (
+            f"RANK: {self.get_academic_rank()}"
+        )
+
+        #EXP infor
+        self.exp_label.text = (
             f"EXPERIENCE {self.exp} / 100"
         )
 
-        self.profile_screen.profile_exp_bar.value = self.exp
+        self.exp_bar.value = self.exp
 
-        self.profile_screen.profile_mission.text = (
-            f"LESSON COMPLETED: {self.mission_index} / {len(self.mission)}"
+        #Lesson progress cuy
+        self.mission_progress_label.text = (
+            f"LESSONS COMPLETED: "
+            f"{completed_lessons} / {total_lessons}"
         )
 
-        self.profile_screen.update_achievements()
-        self.profile_screen.update_mission_archive()
-        self.profile_screen.profile_rank.text = (
+        self.mission_progress_bar.max = total_lessons
+        self.mission_progress_bar.value = completed_lessons 
+
+    def refresh_profile_display(self):
+        profile = self.profile_screen
+        profile.profile_level.text = (
+            f"ACADEMIC LEVEL {self.level:02d}"
+        )
+        profile.profile_rank.text = (
             f"RANK: {self.get_academic_rank()}"
         )
-        self.screen_manager.current = "profile"
+        profile.profile_exp.text = (
+            f"EXPERIENCE {self.exp} / 100"
+        )
+
+        profile.profile_exp_bar.value = self.exp
+
+        profile.profile_mission.text = (
+            f"LESSONS COMPLETED: "
+            f"{self.mission_index} / {len(self.mission)}"
+        )
+
+        profile.update_achievements()
+        profile.update_mission_archive()
+
+    def open_profile(self, instance):
+       self.refresh_profile_display()
+       self.profile_screen.profile_scroll.scroll_y = 1
+       self.screen_manager.current = "profile"
 
     def open_rank_archive(self, instance):
 
@@ -811,9 +882,9 @@ class StudentProtocol(App):
         content.add_widget(Label(
         text=mission["question"],
         color=PARCHMENT,
-        font_size="16sp",
-        size_hint_y=None,
-        height=dp(85),
+        font_size="17sp",
+        size_hint_y=True,
+        height=dp(110),
         halign="center",
         valign="middle",
     ))
@@ -827,6 +898,12 @@ class StudentProtocol(App):
     )
 
         for answer in mission["answers"]:
+
+            question_label = content.children[-1]
+            question_label.bind(
+                size=lambda instance, value:
+                setattr(instance, "text_size", value)
+            )
 
             button =  ProtocolButton(text=answer)
             
@@ -847,7 +924,9 @@ class StudentProtocol(App):
     # CHECK ANSWER
 
     def check_answer(self, answer, correct_answer, popup, is_replay=False):
+        
         popup.dismiss()
+        
         previously_unlocked = self.get_unlocked_achivements()
 
         if answer == correct_answer:
@@ -856,56 +935,49 @@ class StudentProtocol(App):
                 self.status_label.text = "LESSON REVIEW COMPLETED. NO EXP GAINED"
             else:
                old_rank = self.get_academic_rank()
-
                old_level, new_level = award_exp(self, 20)
 
-            # New thing i added. Advanced lesson hehehe
-            self.mission_index += 1
-            self.save_progress()
+               # New thing i added. Advanced lesson hehehe
+               self.mission_index += 1
+               self.save_progress()
 
-        new_rank = self.get_academic_rank()
+               new_rank = self.get_academic_rank()
 
-        if new_level > old_level:
-            if new_rank != old_rank:
-                self.show_rank_up_popup(new_rank)
-            else:
-                self.show_level_up_popup()
+               if new_level > old_level:
+                    if new_rank != old_rank:
+                        self.show_rank_up_popup(new_rank)
+                    else:
+                        self.show_level_up_popup()
 
-            if self.mission_index < len(self.mission):
-                next_number = self.mission_index + 1
+               if self.mission_index < len(self.mission):
+                    next_number = self.mission_index + 1
 
-                self.mission_label.text = (
-                    f"LESSON {next_number:02d} | KNOWLEDGE CHECK"
-                )
+                    self.mission_label.text = (
+                        f"LESSON {next_number:02d} | KNOWLEDGE CHECK"
+                    )
 
-                self.mission_button.text = "START LESSON"
-                self.mission_button.disabled = False
+                    self.mission_button.text = "START LESSON"
+                    self.mission_button.disabled = False
+                    self.status_label.text = "CORRECT ANSWER. KNOWLEDGE ACQUIRED"
 
-            else:
-                self.mission_label.text = "ALL LESSONS COMPLETED" 
-                self.mission_button.text = "LESSONS COMPLETED"
-                self.mission_button.disabled = True
-                self.status_label.text = "ACADEMIC STATUS: COMPLETED!"
-
+               else:
+                   self.mission_label.text = "All Lessons Completed!"
+                   self.mission_button.text = "Lessons Completed!"
+                   self.mission_button.disabled = True
+                   self.status_label.text = "Academic Status: Completed"
+                   
         else:
-            self.status_label.text = "INCORRECT! NO EXP"
+            if is_replay:
+                self.status_label.text = (
+                    "INCORRECT REVIEW ANSWER."
+                )
+            else:
+                self.status_label.text = "INCORRECT ANSWER. TRY AGAIN?"
 
         #Update Dashboard - renew again 
-        self.level_label.text = (
-            f"ACADEMIC LEVEL {self.level:02d}"
-        )
-        self.exp_label.text = (
-            f"EXPERIENCE {self.exp} / 100"
-        )
-        self.exp_bar.value = self.exp
-
-        self.mission_progress_label.text = (
-            f"LESSONS COMPLETED: {self.mission_index} / {len(self.mission)}"
-        )
-        self.mission_progress_bar.value = self.mission_index
-
-        self.profile_screen.update_achievements()
-
+        self.refresh_dashboard_display()
+        self.refresh_profile_display()
+    
         newly_unlocked = (
             self.get_unlocked_achivements()
             - previously_unlocked
@@ -926,7 +998,7 @@ class StudentProtocol(App):
         )
 
         title = Label(
-            text="ACADEMIC PROMOTION",
+            text="ACADEMIC RECORD UPDATED",
             color=GOLD,
             font_size="20sp",
             bold=True
@@ -939,7 +1011,7 @@ class StudentProtocol(App):
         )
 
         message = Label(
-            text="Your Knowledge continues to grow.",
+            text="Your academic standing has advanced. Keep it up.",
             color=MUTED,
             font_size="13sp"
         )
@@ -1037,8 +1109,8 @@ class StudentProtocol(App):
 
         description = {
             "FIRST STEPS": "Complete your first learning lesson.",
-            "KNOWLEDGE SEEKER": "Complete every avaible lesson.",
-            "THE SCHOLAR": "Reach Level 2."
+            "KNOWLEDGE SEEKER": "Complete every available lesson.",
+            "THE NEW STUDENT": "Reach Level 2."
         }
 
         message = "\n\n". join(
@@ -1047,7 +1119,7 @@ class StudentProtocol(App):
         )
 
         popup = Popup(
-            title="ACHIVEMENT UNLOCKED!",
+            title="ACADEMIC ACHIEVEMENT",
             content=Label(
                 text=message,
                 color=PARCHMENT,
@@ -1065,6 +1137,38 @@ class StudentProtocol(App):
     def get_academic_rank(self):
         return get_academic_rank(self.level)
 
+    def show_notification(self, title, message):
+
+        content = BoxLayout(
+            orientation="vertical",
+            padding=dp(18),
+            spacing=dp(12)
+        )
+
+        content.add_widget(Label(
+            text=message,
+            color=PARCHMENT,
+            font_size="14sp",
+            halign="center",
+            valign="middle"
+        ))
+
+        close_button = ProtocolButton(
+            text="ACKNOWLEDGE"
+        )
+
+        content.add_widget(close_button)
+
+        popup = Popup(
+            title=title,
+            content=content,
+            size_hint=(0.85, 0.42),
+            background_color=BG,
+            separator_color=GOLD
+        )
+
+        close_button.bind(on_press=popup.dismiss)
+        popup.open()
 
 if __name__ == "__main__":
     StudentProtocol().run()
