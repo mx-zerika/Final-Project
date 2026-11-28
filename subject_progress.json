@@ -1,0 +1,15 @@
+{
+    "version": 1,
+    "subjects": {
+        "english": {
+            "exp": 0,
+            "level": 1,
+            "completed_lesosns": []
+        },
+        "python": {
+            "exp": 0,
+            "level": 1,
+            "completed_lessons": []
+        }
+    }
+}
