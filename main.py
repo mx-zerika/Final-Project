@@ -13,6 +13,12 @@ from kivy.graphics import Color, RoundedRectangle
 from config import BG, PANEL, GOLD, PARCHMENT, MUTED
 from systems.save_system import load_progress, save_progress
 from systems.exp_system import award_exp
+from systems.subject_system import (
+    load_subject_progress,
+    save_subject_progress,
+    complete_subject_lesson,
+    get_subject_statistics
+)
 from systems.rank_system import (
     get_academic_rank,
     get_unlocked_rank_count,
@@ -1169,6 +1175,23 @@ class StudentProtocol(App):
 
         close_button.bind(on_press=popup.dismiss)
         popup.open()
+
+  def sync_subject_progress(self):
+        for lesson in self.mission[:self.mission_index]:
+
+            subject = lesson.get("subject")
+            lesson_id = lesson.get("id")
+
+            if subject and lesosn_id:
+                complete_subject_lesson(
+                    self.subject_progress,
+                    subject,
+                    lesson_id
+                )
+
+            save_subject_progress(self.subject_progress)
+            self.sync_subject_progress()
+
 
 if __name__ == "__main__":
     StudentProtocol().run()
